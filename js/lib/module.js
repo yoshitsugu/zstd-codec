@@ -12,13 +12,32 @@ const wasmSupported = (() => {
     return false;
 })();
 
+// Not use WASM for iOS 11.2 to avoid bug.
+// See https://github.com/emscripten-core/emscripten/issues/6042
+const buggy = (() => {
+    try {
+        const ua = navigator.userAgent.toLowerCase();
+        if (!/(iphone|ipad)/.test(ua) || /crios/.test(ua)) {
+            return false;
+        }
+        const iosVersion = ua.match(/os (\d+)_(\d+)/);
+        if (iosVersion && iosVersion[1] && iosVersion[2]) {
+            return Number(iosVersion[1]) === 11 && Number(iosVersion[2]) === 2;
+        } else {
+            return false;
+        }
+    } catch (e) {
+    }
+    return false;
+})();
+
 exports.run = (f) => {
     const Module = {};
     Module.onRuntimeInitialized = () => {
         f(Module);
     };
 
-    if (wasmSupported) {
+    if (wasmSupported && !buggy) {
         require('./zstd-codec-binding-wasm.js')(Module);
     }
     else {
